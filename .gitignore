@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+.vscode/
+lib/
+gif
+*.txt
+*.jpeg
+*.png
+*.jpg
+*.dylib
+*.so
+*.o
+discord_game_sdk.h
