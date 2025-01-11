@@ -26,6 +26,8 @@ struct SongInformation
     char duration[256];
 };
 
+char appName[256];
+
 struct Application app;
 struct SongInformation songInformation;
 
@@ -92,7 +94,7 @@ void readSongInformation(struct SongInformation *songInformation)
 {
     // TODO: make a temporary file to store song information
     // tmpfile() creates a temporary file in read/write mode (w+)
-    FILE *file = fopen("song.txt", "r");
+    FILE *file = fopen("/tmp/song.txt", "r");
     if (file == NULL)
     {
         perror("Failed to open song.txt");
@@ -110,24 +112,46 @@ void readSongInformation(struct SongInformation *songInformation)
     printf("Title: %s\nArtist: %s\nDuration: %s\n", title, artist, duration);
 }
 
+void readAppInformation(char* appName) {
+    FILE *file = fopen("/tmp/client.txt", "r");
+    if (file == NULL)
+    {
+        perror("Failed to open client.txt");
+        return;
+    }
+
+    if (fscanf(file, "%255[^\n]", appName) != 1)
+    {
+    printf("Reading app information\n");
+        perror("Failed to read app information");
+        fclose(file);
+        return;
+    } 
+}
+
 static void updateDiscordPresence(struct SongInformation *songInformation)
 {
+    // FIXME: i am making it every time I update
     struct DiscordActivity activity;
     memset(&activity, 0, sizeof(activity));
     activity.type = DiscordActivityType_Playing;
     returnNowPlayingInfo();
     readSongInformation(songInformation);
+    readAppInformation(appName);
     printf("Updating Discord presence with song information:\n");
     printf("Title: %s\n", songInformation->title);
     printf("Artist: %s\n", songInformation->artist);
     printf("Duration: %s\n", songInformation->duration);
+    // Doesn't work
     activity.type = DiscordActivityType_Listening;
+    // Doesn't work
     sprintf(activity.name, "%s", "Losing mind to");
     sprintf(activity.details, "%s", songInformation->title);
     sprintf(activity.state, "%s", songInformation->artist);
     // FIXME: only send once, I think discord will cache the image
     sprintf(activity.assets.large_image, "%s", "https://safebooru.org//images/256/6afab002b8f139968229a48fa02943948fbed138.gif?5172035");
-    sprintf(activity.assets.large_text, "Now Playing");
+    sprintf(activity.assets.large_text, "%s", appName);
+    sprintf(activity.assets.small_image, "%s", "firefox_icon");
     // sprintf(activity.details, );
     // snprintf(activity.state, sizeof(activity.state), "%s", duration);
 
