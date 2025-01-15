@@ -185,7 +185,7 @@ static void updateDiscordPresence(struct SongInformation *songInformation)
     {
         mediaClientName = Spotify;
     }
-    else if (strstr(appName, "f2k") != NULL)
+    else if (strstr(appName, "foobar2000") != NULL)
     {
         mediaClientName = f2k;
     }
