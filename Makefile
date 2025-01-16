@@ -1,6 +1,7 @@
 DISCORD_SDK_URL = https://dl-game-sdk.discordapp.net/3.2.1/discord_game_sdk.zip
 DISCORD_SDK_ZIP = discord_game_sdk.zip
 DISCORD_SDK_DIR = discord-files
+MACOSX_DEPLOYMENT_TARGET = 
 LIB_DIR = lib
 ARCH = $(shell uname -m)
 ifeq ($(ARCH),arm64)
@@ -26,7 +27,13 @@ dylib:
 	swiftc nowPlayingInfo.swift -emit-library 
 
 main: dylib
-	gcc -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR)
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR)
+
+x86_64: dylib
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target x86_64-apple-macosx10.15
+
+arm64: dylib
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target arm64-apple-macosx11
 
 clean:
 	rm -f main main.o nowPlayingInfo.dylib
