@@ -153,6 +153,7 @@ void readAppInformation(char *appName)
         fclose(file);
         return;
     }
+    fclose(file);
 }
 
 static void updateDiscordPresence(struct SongInformation *songInformation)
@@ -162,8 +163,8 @@ static void updateDiscordPresence(struct SongInformation *songInformation)
     memset(&activity, 0, sizeof(activity));
     activity.type = DiscordActivityType_Playing;
     returnNowPlayingInfo();
-    readSongInformation(songInformation);
     readAppInformation(appName);
+    readSongInformation(songInformation);
     mediaClientName = unknown;
     if (strstr(appName, "Safari") != NULL)
     {
