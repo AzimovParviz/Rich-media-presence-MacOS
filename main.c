@@ -217,7 +217,15 @@ static void updateDiscordPresence(struct SongInformation *songInformation)
         activity.details[124] = activity.details[125] = activity.details[126] = '.';
         activity.details[127] = '\0';
     }
-    sprintf(activity.state, "%s", songInformation->artist);
+    if (strlen(songInformation->artist) > 0 && strlen(songInformation->artist) < 128)
+        sprintf(activity.state, "%s", songInformation->artist);
+    else
+    {
+        printf("artist is too long: %lu", strlen(songInformation->artist));
+        strncpy(activity.state, songInformation->artist, 124);
+        activity.state[124] = activity.state[125] = activity.state[126] = '.';
+        activity.state[127] = '\0';
+    }
     // FIXME: only send once, I think discord will cache the image
     sprintf(activity.assets.large_image, "%s", "https://safebooru.org//images/256/6afab002b8f139968229a48fa02943948fbed138.gif?5172035");
     // sprintf(activity.assets.large_text, "%s", appName);
