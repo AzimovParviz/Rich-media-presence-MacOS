@@ -9,7 +9,7 @@ endif
 
 .PHONY: all download clean
 
-all: main
+all: download main
 
 download:
 	@echo "Downloading discord_game_sdk"
@@ -20,7 +20,7 @@ download:
 	unzip $(DISCORD_SDK_ZIP) "lib/$(ARCH)/discord_game_sdk.dylib" -d $(LIB_DIR)
 	mv $(LIB_DIR)/lib/$(ARCH)/discord_game_sdk.dylib $(LIB_DIR)/libdiscord_game_sdk.dylib
 	rm -r $(LIB_DIR)/lib
-	ln -s $(LIB_DIR)/libdiscord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib
+	-ln -s $(LIB_DIR)/libdiscord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib
 
 dylib:
 	swiftc nowPlayingInfo.swift -emit-library 
