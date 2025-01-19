@@ -50,7 +50,7 @@ const char *mediaClientIcons[] = {
     "AppleMusic",
     "mpv"};
 
-char appName[256];
+char appName[128];
 
 struct Application app;
 struct SongInformation songInformation;
@@ -123,22 +123,35 @@ void readSongInformation(struct SongInformation *songInformation)
         return;
     }
 
-    char title[128], artist[128], duration[128];
-    if (fgets(songInformation->title, sizeof(songInformation->title), file) == NULL ||
-        fgets(songInformation->artist, sizeof(songInformation->artist), file) == NULL ||
-        fgets(songInformation->duration, sizeof(songInformation->duration), file) == NULL)
+    fgets(songInformation->title, sizeof(songInformation->title), file);
+    // Means the line was too long, so we have to put the fgets cursor to the next line
+    if (songInformation->title[strlen(songInformation->title) - 1] != '\n')
     {
-        perror("Failed to read song information");
-        fclose(file);
-        return;
+        printf("Title is too long\n");
+        songInformation->title[127] = '\0';
+        while (fgetc(file) != '\n')
+            ;
     }
-    // Remove newline characters if present
-    songInformation->title[strcspn(songInformation->title, "\n")] = '\0';
-    songInformation->artist[strcspn(songInformation->artist, "\n")] = '\0';
-    songInformation->duration[strcspn(songInformation->duration, "\n")] = '\0';
+    else
+    {
+        songInformation->title[strlen(songInformation->title) - 1] = '\0';
+    }
+    fgets(songInformation->artist, sizeof(songInformation->artist), file);
+    if (songInformation->artist[strlen(songInformation->artist) - 1] != '\n')
+    {
+        printf("Artist is too long\n");
+        songInformation->artist[127] = '\0';
+        while (fgetc(file) != '\n')
+            ;
+    }
+    else
+    {
+        songInformation->artist[strlen(songInformation->artist) - 1] = '\0';
+    }
+    fgets(songInformation->duration, sizeof(songInformation->duration), file);
 
     fclose(file);
-    printf("Title: %s\nArtist: %s\nDuration: %s\n", title, artist, duration);
+    printf("Title: %s\nArtist: %s\nDuration: %s\n", songInformation->title, songInformation->artist, songInformation->duration);
 }
 
 void readAppInformation(char *appName)
@@ -150,7 +163,7 @@ void readAppInformation(char *appName)
         return;
     }
 
-    if (fscanf(file, "%255[^\n]", appName) != 1)
+    if (fscanf(file, "%127[^\n]", appName) != 1)
     {
         printf("Reading app information\n");
         perror("Failed to read app information");
@@ -213,8 +226,10 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
         // Discord only lets you have 128 characters and if title is in non latin characters it will be greater than 128 and crash
         sprintf(activity.details, "%s", songInformation->title);
         sprintf(activity.state, "%s", songInformation->artist);
+
         // FIXME: only send once, I think discord will cache the image
         sprintf(activity.assets.large_image, "%s", "https://safebooru.org//images/256/6afab002b8f139968229a48fa02943948fbed138.gif?5172035");
+        // sprintf(activity.assets.large_text, "%s", appName);
         sprintf(activity.assets.small_image, "%s", mediaClientIcons[mediaClientName]);
         // sprintf(activity.assets.small_text, "%s", );
         // sprintf(activity.details, );
