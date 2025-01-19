@@ -12,6 +12,7 @@ endif
 
 all: download main
 
+# TODO: move unzipping to a separate target to unzip different architectures
 download:
 	@echo "Downloading discord_game_sdk"
 	curl -o $(DISCORD_SDK_ZIP) $(DISCORD_SDK_URL)
