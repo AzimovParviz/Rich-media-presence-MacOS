@@ -5,8 +5,8 @@ if [ "$1" == "download" ]; then
   echo "Unzipping discord_game_sdk"
   unzip discord_game_sdk.zip "c/discord_game_sdk.h" -d ./discord-files
   mv ./discord-files/c/discord_game_sdk.h ./discord-files/discord_game_sdk.h
-  arch="uname -m"
-  if (arch=="arm64"); then
+  arch=$(uname -m)
+  if [ "$arch" == "arm64" ]; then
     arch="aarch64"
   fi
   unzip discord_game_sdk.zip "lib/${arch}/discord_game_sdk.dylib" -d ./lib

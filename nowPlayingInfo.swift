@@ -92,12 +92,10 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
 
         let result =
             "Title: \(nowPlayingInfo.songTitle)\nArtist: \(nowPlayingInfo.artistName)\nDuration: \(nowPlayingInfo.songDuration)\nArtwork: \(String(describing: information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data))"
-        print("printed result", result)
         do {
             //TODO: temporary file instead of project folder
             let fileURL = URL(fileURLWithPath: "/tmp/song.txt")
             try result.write(to: fileURL, atomically: true, encoding: .utf8)
-            print("Now playing info written to song.txt")
         } catch {
             print("Failed to write to song.txt: \(error)")
         }
@@ -105,11 +103,9 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
         MRMediaRemoteGetNowPlayingClient(DispatchQueue.global(qos: .default)) { clientObj in
             // print("Client info", clientObj)
             let clientString = String(describing: clientObj)
-            print("Client info", clientString)
             let fileURL = URL(fileURLWithPath: "/tmp/client.txt")
             do {
                 try clientString.write(to: fileURL, atomically: true, encoding: .utf8)
-                print("Client info written to client.txt")
             } catch {
                 print("Failed to write client info to file: \(error)")
             }
@@ -117,19 +113,18 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
             completion("success")
         }
 
-        if let artworkData = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
+        // if let artworkData = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
 
-            //TODO: use kMRMediaRemoteNowPlayingInfoArtworkMIMEType for this
-            let artworkURL = URL(fileURLWithPath: "/tmp/albumArt.jpeg")
-            do {
-                try artworkData.write(to: artworkURL)
-                print("Album art written to albumArt.jpeg")
-            } catch {
-                print("Failed to write album art to albumArt.jpeg: \(error)")
-            }
-        }
+        //     //TODO: use kMRMediaRemoteNowPlayingInfoArtworkMIMEType for this
+        //     let artworkURL = URL(fileURLWithPath: "/tmp/albumArt.jpeg")
+        //     do {
+        //         try artworkData.write(to: artworkURL)
+        //         print("Album art written to albumArt.jpeg")
+        //     } catch {
+        //         print("Failed to write album art to albumArt.jpeg: \(error)")
+        //     }
+        // }
         CFRunLoopStop(CFRunLoopGetCurrent())
-        print("after return somehow")
         return
     }
     return
@@ -138,7 +133,5 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
 @_cdecl("returnNowPlayingInfo")
 public func returnNowPlayingInfo() {
     nowPlayingInfo { result in
-        print("result", result)
     }
 }
-
