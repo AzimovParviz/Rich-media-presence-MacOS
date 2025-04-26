@@ -10,4 +10,5 @@ gif
 *.dylib
 *.so
 *.o
-discord_game_sdk.h
+discord_game_sdk.*
+mediapresence
