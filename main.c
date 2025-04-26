@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "discord-files/discord_game_sdk.h"
-void returnNowPlayingInfo();
 #define DISCORD_REQUIRE(x) assert(x == DiscordResult_Ok)
 
 struct Application
@@ -116,70 +115,54 @@ void discordInit(DiscordClientId clientId)
 
 void readSongInformation(struct SongInformation *songInformation)
 {
-    FILE *file = fopen("/tmp/song.txt", "r");
-    if (file == NULL)
+    // FILE *appleScriptOutput = fopen("/tmp/song.txt", "r");
+    FILE *appleScriptOutput = popen("osascript nowPlaying.scptd", "r");
+    if (appleScriptOutput == NULL)
     {
-        perror("Failed to open song.txt");
+        perror("Failed to execute AppleScript");
         return;
     }
 
-    fgets(songInformation->title, sizeof(songInformation->title), file);
+    fgets(songInformation->title, sizeof(songInformation->title), appleScriptOutput);
     // Means the line was too long, so we have to put the fgets cursor to the next line
     if (songInformation->title[strlen(songInformation->title) - 1] != '\n')
     {
         printf("Title is too long\n");
         songInformation->title[127] = '\0';
-        while (fgetc(file) != '\n')
+        while (fgetc(appleScriptOutput) != '\n')
             ;
     }
     else
     {
         songInformation->title[strlen(songInformation->title) - 1] = '\0';
     }
-    fgets(songInformation->artist, sizeof(songInformation->artist), file);
+
+    fgets(songInformation->artist, sizeof(songInformation->artist), appleScriptOutput);
+
     if (songInformation->artist[strlen(songInformation->artist) - 1] != '\n')
     {
         printf("Artist is too long\n");
         songInformation->artist[127] = '\0';
-        while (fgetc(file) != '\n')
+        while (fgetc(appleScriptOutput) != '\n')
             ;
     }
     else
     {
         songInformation->artist[strlen(songInformation->artist) - 1] = '\0';
     }
-    fgets(songInformation->duration, sizeof(songInformation->duration), file);
 
-    fclose(file);
+    fgets(songInformation->duration, sizeof(songInformation->duration), appleScriptOutput);
+    fgets(appName, sizeof(appName), appleScriptOutput);
+
+    pclose(appleScriptOutput);
     printf("Title: %s\nArtist: %s\nDuration: %s\n", songInformation->title, songInformation->artist, songInformation->duration);
-}
-
-void readAppInformation(char *appName)
-{
-    FILE *file = fopen("/tmp/client.txt", "r");
-    if (file == NULL)
-    {
-        perror("Failed to open client.txt");
-        return;
-    }
-
-    if (fscanf(file, "%127[^\n]", appName) != 1)
-    {
-        printf("Reading app information\n");
-        perror("Failed to read app information");
-        fclose(file);
-        return;
-    }
-    fclose(file);
 }
 
 static bool updateDiscordPresence(struct SongInformation *songInformation)
 {
     static struct DiscordActivity activity;
-    returnNowPlayingInfo();
-    readAppInformation(appName);
-    printf("App name: %s\n", appName);
     readSongInformation(songInformation);
+    printf("App name: %s\n", appName);
     mediaClientName = unknown;
     if (strstr(appName, "Safari") != NULL)
     {
@@ -213,13 +196,16 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
     {
         mediaClientName = mpv;
     }
-
-    // Doesn't work
-    // Doesn't work
     if (strcmp(activity.details, songInformation->title) != 0 || strcmp(activity.state, songInformation->artist) != 0)
     {
-        activity.type = DiscordActivityType_Listening;
-        sprintf(activity.name, "%s", "Losing mind to");
+        // ActivityType is strictly for the purpose of handling events that you receive from Discord; though the SDK will not reject a payload with an ActivityType sent, it will be discarded and will not change anything in the client.
+        //  sprintf(activity.name, "%s", "something");
+        //  activity.type = 2;
+        if (songInformation->duration[0] != '\0')
+        {
+            activity.timestamps.start = 0;
+            activity.timestamps.end = strtol(songInformation->duration, NULL, 10);
+        }
         printf("Updating Discord presence with song information:\n");
         // Discord only lets you have 128 characters and if title is in non latin characters it will be greater than 128 and crash
         sprintf(activity.details, "%s", songInformation->title);
@@ -227,7 +213,6 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
 
         // FIXME: only send once, I think discord will cache the image
         sprintf(activity.assets.large_image, "%s", "https://safebooru.org//images/256/6afab002b8f139968229a48fa02943948fbed138.gif?5172035");
-        printf("Icon: %s\n", mediaClientIcons[mediaClientName]);
         sprintf(activity.assets.small_image, "%s", mediaClientIcons[mediaClientName]);
         app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
         return true;
