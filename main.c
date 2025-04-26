@@ -43,12 +43,12 @@ const char *mediaClientIcons[] = {
     "unknown_icon",
     "safari_icon",
     "firefox_icon",
-    "yt_icon",
-    "Twitch",
-    "Spotify",
+    "youtube_icon",
+    "twitch_icon",
+    "spotify_icon",
     "f2k_icon",
-    "AppleMusic",
-    "mpv"};
+    "apple_music_icon",
+    "mpv_icon"};
 
 char appName[128];
 
@@ -176,16 +176,16 @@ void readAppInformation(char *appName)
 static bool updateDiscordPresence(struct SongInformation *songInformation)
 {
     static struct DiscordActivity activity;
-    // memset(&activity, 0, sizeof(activity));
     returnNowPlayingInfo();
     readAppInformation(appName);
+    printf("App name: %s\n", appName);
     readSongInformation(songInformation);
     mediaClientName = unknown;
     if (strstr(appName, "Safari") != NULL)
     {
         mediaClientName = Safari;
     }
-    else if (strstr(appName, "Firefox") != NULL)
+    else if (strstr(appName, "Firefox") != NULL && strstr(songInformation->title, "- Twitch") == NULL)
     {
         mediaClientName = Firefox;
     }
@@ -193,7 +193,7 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
     {
         mediaClientName = YouTube;
     }
-    else if (strstr(appName, "Twitch") != NULL)
+    else if (strstr(songInformation->title, "- Twitch") != NULL)
     {
         mediaClientName = Twitch;
     }
@@ -205,7 +205,7 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
     {
         mediaClientName = f2k;
     }
-    else if (strstr(appName, "AppleMusic") != NULL)
+    else if (strstr(appName, "apple.Music") != NULL)
     {
         mediaClientName = AppleMusic;
     }
@@ -215,25 +215,20 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
     }
 
     // Doesn't work
-    activity.type = DiscordActivityType_Listening;
     // Doesn't work
-    sprintf(activity.name, "%s", "Losing mind to");
     if (strcmp(activity.details, songInformation->title) != 0 || strcmp(activity.state, songInformation->artist) != 0)
     {
+        activity.type = DiscordActivityType_Listening;
+        sprintf(activity.name, "%s", "Losing mind to");
         printf("Updating Discord presence with song information:\n");
-        // printf("Artist: %s\n", songInformation->artist);
-        // printf("Duration: %s\n", songInformation->duration);
         // Discord only lets you have 128 characters and if title is in non latin characters it will be greater than 128 and crash
         sprintf(activity.details, "%s", songInformation->title);
         sprintf(activity.state, "%s", songInformation->artist);
 
         // FIXME: only send once, I think discord will cache the image
         sprintf(activity.assets.large_image, "%s", "https://safebooru.org//images/256/6afab002b8f139968229a48fa02943948fbed138.gif?5172035");
-        // sprintf(activity.assets.large_text, "%s", appName);
+        printf("Icon: %s\n", mediaClientIcons[mediaClientName]);
         sprintf(activity.assets.small_image, "%s", mediaClientIcons[mediaClientName]);
-        // sprintf(activity.assets.small_text, "%s", );
-        // sprintf(activity.details, );
-        // snprintf(activity.state, sizeof(activity.state), "%s", duration);:w
         app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
         return true;
     }
