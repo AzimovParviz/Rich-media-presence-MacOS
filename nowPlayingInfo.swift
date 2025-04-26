@@ -8,61 +8,68 @@ struct NowPlayingInfo {
     var songDuration: TimeInterval
 }
 
-func nowPlayingInfo(completion: @escaping (String) -> Void) {
-    let mediaRemoteBundle: CFBundle
-    let MRMediaRemoteGetNowPlayingInfo:
+struct MediaBundle {
+    var mediaRemoteBundle: CFBundle
+    var MRMediaRemoteGetNowPlayingInfo:
         @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
-    let MRMediaRemoteGetNowPlayingApplicationIsPlaying:
+    var MRMediaRemoteGetNowPlayingApplicationIsPlaying:
         @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
-    let MRMediaRemoteGetNowPlayingClient:
+    var MRMediaRemoteGetNowPlayingClient:
         @convention(c) (DispatchQueue, @escaping (Any) -> Void) -> Void
-    let MRNowPlayingClientGetBundleIdentifier:
-        @convention(c) ([String: Any]) -> String
-    let MRNowPlayingClientGetParentAppBundleIdentifier:
-        @convention(c) ([String: Any]) -> String
+    var MRNowPlayingClientGetBundleIdentifier: @convention(c) ([String: Any]) -> String
+    var MRNowPlayingClientGetParentAppBundleIdentifier: @convention(c) ([String: Any]) -> String
 
-    guard
-        let bundle = CFBundleCreate(
-            kCFAllocatorDefault,
-            NSURL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework")),
-        let MRMediaRemoteGetNowPlayingInfoPointer = CFBundleGetFunctionPointerForName(
-            bundle, "MRMediaRemoteGetNowPlayingInfo" as CFString),
-        let MRMediaRemoteGetNowPlayingApplicationIsPlayingPointer =
-            CFBundleGetFunctionPointerForName(
-                bundle, "MRMediaRemoteGetNowPlayingApplicationIsPlaying" as CFString),
-        let MRMediaRemoteGetNowPlayingClientPointer =
-            CFBundleGetFunctionPointerForName(
-                bundle, "MRMediaRemoteGetNowPlayingClient" as CFString),
-        let MRNowPlayingClientGetBundleIdentifierPointer =
-            CFBundleGetFunctionPointerForName(
-                bundle, "MRNowPlayingClientGetBundleIdentifier" as CFString),
-        let MRNowPlayingClientGetParentAppBundleIdentifierPointer =
-            CFBundleGetFunctionPointerForName(
-                bundle, "MRNowPlayingClientGetParentAppBundleIdentifier" as CFString)
-    else {
-        print("Failed to load MediaRemote.framework or get function pointers")
-        // throw NSError(domain: "com.example.nowPlayingInfo", code: 1)
-        completion("failed")
+    static let shared: MediaBundle? = {
+        guard
+            let bundle = CFBundleCreate(
+                kCFAllocatorDefault,
+                NSURL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework")),
+            let MRMediaRemoteGetNowPlayingInfoPointer = CFBundleGetFunctionPointerForName(
+                bundle, "MRMediaRemoteGetNowPlayingInfo" as CFString),
+            let MRMediaRemoteGetNowPlayingApplicationIsPlayingPointer =
+                CFBundleGetFunctionPointerForName(
+                    bundle, "MRMediaRemoteGetNowPlayingApplicationIsPlaying" as CFString),
+            let MRMediaRemoteGetNowPlayingClientPointer =
+                CFBundleGetFunctionPointerForName(
+                    bundle, "MRMediaRemoteGetNowPlayingClient" as CFString),
+            let MRNowPlayingClientGetBundleIdentifierPointer =
+                CFBundleGetFunctionPointerForName(
+                    bundle, "MRNowPlayingClientGetBundleIdentifier" as CFString),
+            let MRNowPlayingClientGetParentAppBundleIdentifierPointer =
+                CFBundleGetFunctionPointerForName(
+                    bundle, "MRNowPlayingClientGetParentAppBundleIdentifier" as CFString)
+        else {
+            print("Failed to load MediaRemote.framework or get function pointers")
+            return nil
+        }
+
+        return MediaBundle(
+            mediaRemoteBundle: bundle,
+            MRMediaRemoteGetNowPlayingInfo: unsafeBitCast(
+                MRMediaRemoteGetNowPlayingInfoPointer,
+                to: (@convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void).self
+            ),
+            MRMediaRemoteGetNowPlayingApplicationIsPlaying: unsafeBitCast(
+                MRMediaRemoteGetNowPlayingApplicationIsPlayingPointer,
+                to: (@convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void).self),
+            MRMediaRemoteGetNowPlayingClient: unsafeBitCast(
+                MRMediaRemoteGetNowPlayingClientPointer,
+                to: (@convention(c) (DispatchQueue, @escaping (Any) -> Void) -> Void).self),
+            MRNowPlayingClientGetBundleIdentifier: unsafeBitCast(
+                MRNowPlayingClientGetBundleIdentifierPointer,
+                to: (@convention(c) ([String: Any]) -> String).self),
+            MRNowPlayingClientGetParentAppBundleIdentifier: unsafeBitCast(
+                MRNowPlayingClientGetParentAppBundleIdentifierPointer,
+                to: (@convention(c) ([String: Any]) -> String).self)
+        )
+    }()
+}
+
+func nowPlayingInfo(completion: @escaping (String) -> Void) {
+    guard let mediaBundle = MediaBundle.shared else {
+        completion("Failed to initialize MediaBundle")
         return
     }
-
-    mediaRemoteBundle = bundle
-    // the original func is MRMediaRemoteGetNowPlayingInfo(dispatch_get_main_queue(), ^(CFDictionaryRef information) {});
-    MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(
-        MRMediaRemoteGetNowPlayingInfoPointer,
-        to: (@convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void).self)
-    MRMediaRemoteGetNowPlayingApplicationIsPlaying = unsafeBitCast(
-        MRMediaRemoteGetNowPlayingApplicationIsPlayingPointer,
-        to: (@convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void).self)
-    MRMediaRemoteGetNowPlayingClient = unsafeBitCast(
-        MRMediaRemoteGetNowPlayingClientPointer,
-        to: (@convention(c) (DispatchQueue, @escaping (Any) -> Void) -> Void).self)
-    MRNowPlayingClientGetBundleIdentifier = unsafeBitCast(
-        MRNowPlayingClientGetBundleIdentifierPointer,
-        to: (@convention(c) ([String: Any]) -> String).self)
-    MRNowPlayingClientGetParentAppBundleIdentifier = unsafeBitCast(
-        MRNowPlayingClientGetParentAppBundleIdentifierPointer,
-        to: (@convention(c) ([String: Any]) -> String).self)
 
     var nowPlayingInfo = NowPlayingInfo(
         songTitle: "",
@@ -71,7 +78,7 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
         songDuration: 0
     )
     print("Calling MRMediaRemoteGetNowPlayingInfo")
-    MRMediaRemoteGetNowPlayingInfo(DispatchQueue.global(qos: .default)) { information in
+    mediaBundle.MRMediaRemoteGetNowPlayingInfo(DispatchQueue.global(qos: .default)) { information in
 
         // print(information["kMRMediaRemoteNowPlayingInfoClientPropertiesData"] as? NSData ?? nil)
         nowPlayingInfo.songTitle =
@@ -80,15 +87,6 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
             information["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? "Unknown Artist"
         nowPlayingInfo.songDuration =
             information["kMRMediaRemoteNowPlayingInfoDuration"] as? TimeInterval ?? 0
-
-        if let artworkData = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data,
-            let artworkImage = NSImage(data: artworkData)
-        {
-            nowPlayingInfo.albumArt = artworkImage
-            print("Album art successfully retrieved.")
-        } else {
-            print("No album art available.")
-        }
 
         let result =
             "Title: \(nowPlayingInfo.songTitle)\nArtist: \(nowPlayingInfo.artistName)\nDuration: \(nowPlayingInfo.songDuration)\nArtwork: \(String(describing: information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data))"
@@ -100,7 +98,8 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
             print("Failed to write to song.txt: \(error)")
         }
 
-        MRMediaRemoteGetNowPlayingClient(DispatchQueue.global(qos: .default)) { clientObj in
+        mediaBundle.MRMediaRemoteGetNowPlayingClient(DispatchQueue.global(qos: .default)) {
+            clientObj in
             // print("Client info", clientObj)
             let clientString = String(describing: clientObj)
             let fileURL = URL(fileURLWithPath: "/tmp/client.txt")
@@ -109,21 +108,21 @@ func nowPlayingInfo(completion: @escaping (String) -> Void) {
             } catch {
                 print("Failed to write client info to file: \(error)")
             }
-            // print("Bundle ID", MRNowPlayingClientGetBundleIdentifier(clientObj as! [String: Any])) 
+            // print("Bundle ID", MRNowPlayingClientGetBundleIdentifier(clientObj as! [String: Any]))
             completion("success")
         }
 
-        // if let artworkData = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
+        if let artworkData = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data {
 
-        //     //TODO: use kMRMediaRemoteNowPlayingInfoArtworkMIMEType for this
-        //     let artworkURL = URL(fileURLWithPath: "/tmp/albumArt.jpeg")
-        //     do {
-        //         try artworkData.write(to: artworkURL)
-        //         print("Album art written to albumArt.jpeg")
-        //     } catch {
-        //         print("Failed to write album art to albumArt.jpeg: \(error)")
-        //     }
-        // }
+            //TODO: use kMRMediaRemoteNowPlayingInfoArtworkMIMEType for this
+            let artworkURL = URL(fileURLWithPath: "/tmp/albumArt.jpeg")
+            do {
+                try artworkData.write(to: artworkURL)
+                print("Album art written to albumArt.jpeg")
+            } catch {
+                print("Failed to write album art to albumArt.jpeg: \(error)")
+            }
+        }
         CFRunLoopStop(CFRunLoopGetCurrent())
         return
     }
