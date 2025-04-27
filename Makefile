@@ -20,21 +20,22 @@ download:
 	unzip $(DISCORD_SDK_ZIP) "c/discord_game_sdk.h" -d $(DISCORD_SDK_DIR)
 	mv $(DISCORD_SDK_DIR)/c/discord_game_sdk.h $(DISCORD_SDK_DIR)/discord_game_sdk.h
 	unzip $(DISCORD_SDK_ZIP) "lib/$(ARCH)/discord_game_sdk.dylib" -d $(LIB_DIR)
-	mv $(LIB_DIR)/lib/$(ARCH)/discord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib
+	mv $(LIB_DIR)/lib/$(ARCH)/discord_game_sdk.dylib $(LIB_DIR)/libdiscord_game_sdk.dylib
 	rm -r $(LIB_DIR)/lib
+	-ln -s $(LIB_DIR)/libdiscord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib
 
 dylib:
 	swiftc nowPlayingInfo.swift -emit-library 
 
 main: dylib
-	clang -o mediapresence main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR)
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR)
 
 x86_64: dylib
-	clang -o mediapresence main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target x86_64-apple-macosx10.15
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target x86_64-apple-macosx10.15
 
 arm64: dylib
-	clang -o mediapresence main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target arm64-apple-macosx11
+	clang -o main.o main.c -L./$(LIB_DIR) -ldiscord_game_sdk -L./ -lnowPlayingInfo -lpthread -rpath $(LIB_DIR) -target arm64-apple-macosx11
 
 clean:
-	rm -f mediapresence nowPlayingInfo.dylib
+	rm -f main main.o nowPlayingInfo.dylib
 	rm -rf $(DISCORD_SDK_DIR) $(LIB_DIR) $(DISCORD_SDK_ZIP)
