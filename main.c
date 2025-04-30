@@ -6,7 +6,11 @@
 #include <string.h>
 
 #include "discord-files/discord_game_sdk.h"
+void returnNowPlayingInfo();
 #define DISCORD_REQUIRE(x) assert(x == DiscordResult_Ok)
+#ifndef OSX_VER
+#define OSX_VER STR("15.4.0")
+#endif
 
 struct Application
 {
@@ -113,23 +117,15 @@ void discordInit(DiscordClientId clientId)
     app.application->get_oauth2_token(app.application, &app, OnOAuth2Token);
 }
 
-void readSongInformation(struct SongInformation *songInformation)
-{
-    // FILE *appleScriptOutput = fopen("/tmp/song.txt", "r");
-    FILE *appleScriptOutput = popen("osascript nowPlaying.scptd", "r");
-    if (appleScriptOutput == NULL)
-    {
-        perror("Failed to execute AppleScript");
-        return;
-    }
-
-    fgets(songInformation->title, sizeof(songInformation->title), appleScriptOutput);
+void readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformation) {
+  
+    fgets(songInformation->title, sizeof(songInformation->title), infoFile);
     // Means the line was too long, so we have to put the fgets cursor to the next line
     if (songInformation->title[strlen(songInformation->title) - 1] != '\n')
     {
         printf("Title is too long\n");
         songInformation->title[127] = '\0';
-        while (fgetc(appleScriptOutput) != '\n')
+        while (fgetc(infoFile) != '\n')
             ;
     }
     else
@@ -137,13 +133,13 @@ void readSongInformation(struct SongInformation *songInformation)
         songInformation->title[strlen(songInformation->title) - 1] = '\0';
     }
 
-    fgets(songInformation->artist, sizeof(songInformation->artist), appleScriptOutput);
+    fgets(songInformation->artist, sizeof(songInformation->artist), infoFile);
 
     if (songInformation->artist[strlen(songInformation->artist) - 1] != '\n')
     {
         printf("Artist is too long\n");
         songInformation->artist[127] = '\0';
-        while (fgetc(appleScriptOutput) != '\n')
+        while (fgetc(infoFile) != '\n')
             ;
     }
     else
@@ -151,16 +147,43 @@ void readSongInformation(struct SongInformation *songInformation)
         songInformation->artist[strlen(songInformation->artist) - 1] = '\0';
     }
 
-    fgets(songInformation->duration, sizeof(songInformation->duration), appleScriptOutput);
-    fgets(appName, sizeof(appName), appleScriptOutput);
+    fgets(songInformation->duration, sizeof(songInformation->duration), infoFile);
+    fgets(appName, sizeof(appName), infoFile);
+}
 
-    pclose(appleScriptOutput);
+void readSongInformation(struct SongInformation *songInformation)
+{
+    //On version 15.4 and higher the swift solution won't work
+    //meanwhile, on some lower versions, like Ventura 13.7.5, the AS won't work so we have to use the swift version on lower macos version
+    //in theory, anything lower than 13 we could just use AppleScript
+    FILE *songInfoFile;
+    if(strstr(OSX_VER, "15.4") != NULL)
+    {
+        songInfoFile = popen("osascript nowPlaying.scptd", "r");
+	readFileOutputSongInfo(songInfoFile, songInformation);	
+	pclose(songInfoFile);
+    }
+    else
+    {        
+        songInfoFile = fopen("/tmp/song.txt", "r"); 
+	readFileOutputSongInfo(songInfoFile, songInformation);	
+	fclose(songInfoFile);
+    }
+    if (songInfoFile == NULL)
+    {
+        perror("Failed to execute AppleScript or open file");
+        return;
+    }
     printf("Title: %s\nArtist: %s\nDuration: %s\n", songInformation->title, songInformation->artist, songInformation->duration);
 }
+
+
 
 static bool updateDiscordPresence(struct SongInformation *songInformation)
 {
     static struct DiscordActivity activity;
+    if(strstr(OSX_VER, "15.4") == NULL)
+	returnNowPlayingInfo();
     readSongInformation(songInformation);
     printf("App name: %s\n", appName);
     mediaClientName = unknown;
@@ -188,6 +211,7 @@ static bool updateDiscordPresence(struct SongInformation *songInformation)
     {
         mediaClientName = f2k;
     }
+	//this string differs and depends on macos version, so maybe just Music is better in this case
     else if (strstr(appName, "apple.Music") != NULL)
     {
         mediaClientName = AppleMusic;
@@ -239,13 +263,13 @@ void *updateLoop()
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
-    {
-        printf("Usage: %s <client_id>\n", argv[0]);
-        return 1;
-    }
-    DiscordClientId clientId = atoll(argv[1]);
-    discordInit(clientId);
+    //if (argc < 2)
+    //{
+    //    printf("Usage: %s <client_id>\n", argv[0]);
+    //    return 1;
+    //}
+    //DiscordClientId clientId = atoll(argv[1]);
+    discordInit(CLIENT_ID);
     pthread_t t1;
     pthread_create(&t1, NULL, updateLoop, NULL);
     pthread_detach(t1);

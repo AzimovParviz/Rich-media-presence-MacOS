@@ -1,6 +1,7 @@
 DISCORD_SDK_URL = https://dl-game-sdk.discordapp.net/3.2.1/discord_game_sdk.zip
 DISCORD_SDK_ZIP = discord_game_sdk.zip
 DISCORD_SDK_DIR = discord-files
+OSX_VER = $(shell sw_vers -productVersion)
 MACOSX_DEPLOYMENT_TARGET = 10.15
 LIB_DIR = lib
 ARCH = $(shell uname -m)
@@ -8,7 +9,7 @@ ifeq ($(ARCH),arm64)
     ARCH = aarch64
 endif
 
-BINARY_NAME = main
+BINARY_NAME = mediapresence
 
 .PHONY: all download clean unzip
 
@@ -27,10 +28,13 @@ download:
 	@echo "Downloading $(DISCORD_SDK_ZIP).zip"
 	curl -o $(DISCORD_SDK_ZIP) $(DISCORD_SDK_URL)
 
-build:
-	clang -o $(BINARY_NAME) main.c -L./$(LIB_DIR) -ldiscord_game_sdk -lpthread -rpath ./$(LIB_DIR) -target $(ARCH)-apple-macosx10.15
-	mv $(LIB_DIR)/libdiscord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib
+dylib:
+	swiftc nowPlayingInfo.swift -emit-library
 
+build:
+	clang -o $(BINARY_NAME) main.c -L./$(LIB_DIR) -ldiscord_game_sdk -lpthread -rpath ./$(LIB_DIR) -target $(ARCH)-apple-macosx11 -DOSX_VER=\"${OSX_VER}\" -L./ -lnowPlayingInfo -DCLIENT_ID=${clientId}
+
+	mv $(LIB_DIR)/libdiscord_game_sdk.dylib $(LIB_DIR)/discord_game_sdk.dylib 
 clean:
 	rm -f $(BINARY_NAME)
 	rm -rf $(DISCORD_SDK_DIR) $(LIB_DIR) $(DISCORD_SDK_ZIP)
