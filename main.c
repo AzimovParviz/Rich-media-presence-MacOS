@@ -9,7 +9,7 @@
 void returnNowPlayingInfo();
 #define DISCORD_REQUIRE(x) assert(x == DiscordResult_Ok)
 #ifndef OSX_VER
-#define OSX_VER STR("15.4.0")
+#define OSX_VER STR("15.5.0")
 #endif
 
 struct Application
@@ -157,17 +157,17 @@ void readSongInformation(struct SongInformation *songInformation)
     //meanwhile, on some lower versions, like Ventura 13.7.5, the AS won't work so we have to use the swift version on lower macos version
     //in theory, anything lower than 13 we could just use AppleScript
     FILE *songInfoFile;
-    if(strstr(OSX_VER, "15.4") != NULL)
-    {
-        songInfoFile = popen("osascript nowPlaying.scptd", "r");
-	readFileOutputSongInfo(songInfoFile, songInformation);	
-	pclose(songInfoFile);
-    }
-    else
+    if(strstr(OSX_VER, "13.7.") !=NULL)
     {        
         songInfoFile = fopen("/tmp/song.txt", "r"); 
 	readFileOutputSongInfo(songInfoFile, songInformation);	
 	fclose(songInfoFile);
+    }
+    else
+    {
+        songInfoFile = popen("osascript nowPlaying.scptd", "r");
+	readFileOutputSongInfo(songInfoFile, songInformation);	
+	pclose(songInfoFile); 
     }
     if (songInfoFile == NULL)
     {
@@ -182,7 +182,7 @@ void readSongInformation(struct SongInformation *songInformation)
 static bool updateDiscordPresence(struct SongInformation *songInformation)
 {
     static struct DiscordActivity activity;
-    if(strstr(OSX_VER, "15.4") == NULL)
+    if(strstr(OSX_VER, "13.7.") != NULL)
 	returnNowPlayingInfo();
     readSongInformation(songInformation);
     printf("App name: %s\n", appName);
