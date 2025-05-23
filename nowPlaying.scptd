@@ -1,0 +1,25 @@
+use framework "Foundation"
+
+set MediaRemote to current application's NSBundle's bundleWithPath:"/System/Library/PrivateFrameworks/MediaRemote.framework/"
+MediaRemote's load()
+
+set MRNowPlayingRequest to current application's NSClassFromString("MRNowPlayingRequest")
+
+--when switching between videos in firefox, for example, it throws an error that displayName is not available
+--this is a basic try catch with a retry. i am for now assuming that if it fails after retrying then something else is wrong
+--TODO: better solution that will let it sit idle instead of making the app come to a halt when theres nothing playing
+try
+	set appName to MRNowPlayingRequest's localNowPlayingPlayerPath()'s client()'s displayName()
+on error errMsg
+	delay 5
+	set appName to MRNowPlayingRequest's localNowPlayingPlayerPath()'s client()'s displayName()
+end try
+
+set infoDict to MRNowPlayingRequest's localNowPlayingItem()'s nowPlayingInfo()
+
+set title to infoDict's valueForKey:"kMRMediaRemoteNowPlayingInfoTitle"
+set album to infoDict's valueForKey:"kMRMediaRemoteNowPlayingInfoAlbum"
+set artist to infoDict's valueForKey:"kMRMediaRemoteNowPlayingInfoArtist"
+set duration to infoDict's valueForKey:"kMRMediaRemoteNowPlayingInfoDuration"
+
+return "Title: " & (title as text) & "\nArtist: " & (artist as text) & "\nDuration: " & (duration as text) & "\n" & (appName as text)
