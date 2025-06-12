@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -117,9 +118,16 @@ void discordInit(DiscordClientId clientId)
     app.application->get_oauth2_token(app.application, &app, OnOAuth2Token);
 }
 
-void readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformation) {
+// Returns false if the title is too long or if the AppleScript failed to fetch the song (e.g nothing was playing)
+bool readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformation) {
   
     fgets(songInformation->title, sizeof(songInformation->title), infoFile);
+
+	if (!infoFile)
+	{
+		return false;
+	}
+
     // Means the line was too long, so we have to put the fgets cursor to the next line
     if (songInformation->title[strlen(songInformation->title) - 1] != '\n')
     {
@@ -127,6 +135,7 @@ void readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformat
         songInformation->title[127] = '\0';
         while (fgetc(infoFile) != '\n')
             ;
+		return false;
     }
     else
     {
@@ -141,6 +150,7 @@ void readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformat
         songInformation->artist[127] = '\0';
         while (fgetc(infoFile) != '\n')
             ;
+		return false;
     }
     else
     {
@@ -149,6 +159,7 @@ void readFileOutputSongInfo(FILE *infoFile, struct SongInformation *songInformat
 
     fgets(songInformation->duration, sizeof(songInformation->duration), infoFile);
     fgets(appName, sizeof(appName), infoFile);
+	return true;
 }
 
 void readSongInformation(struct SongInformation *songInformation)
@@ -156,18 +167,21 @@ void readSongInformation(struct SongInformation *songInformation)
     //On version 15.4 and higher the swift solution won't work
     //meanwhile, on some lower versions, like Ventura 13.7.5, the AS won't work so we have to use the swift version on lower macos version
     //in theory, anything lower than 13 we could just use AppleScript
-    FILE *songInfoFile;
+    FILE *songInfoFile = NULL;
     if(strstr(OSX_VER, "13.7.") !=NULL)
     {        
         songInfoFile = fopen("/tmp/song.txt", "r"); 
-	readFileOutputSongInfo(songInfoFile, songInformation);	
-	fclose(songInfoFile);
+		readFileOutputSongInfo(songInfoFile, songInformation);	
+		fclose(songInfoFile);
     }
     else
     {
-        songInfoFile = popen("osascript nowPlaying.scptd", "r");
-	readFileOutputSongInfo(songInfoFile, songInformation);	
-	pclose(songInfoFile); 
+		while (!songInfoFile)
+		{
+			songInfoFile = popen("osascript nowPlaying.scptd", "r");
+			readFileOutputSongInfo(songInfoFile, songInformation);	
+		}
+		pclose(songInfoFile); 
     }
     if (songInfoFile == NULL)
     {
@@ -255,20 +269,14 @@ void *updateLoop()
         return NULL;
     for (;;)
     {
-        if (updateDiscordPresence(&songInformation))
-            DISCORD_REQUIRE(app.core->run_callbacks(app.core));
+        DISCORD_REQUIRE(app.core->run_callbacks(app.core));
+        updateDiscordPresence(&songInformation);
         usleep(1666667 * 2);
     }
 }
 
 int main(int argc, char **argv)
 {
-    //if (argc < 2)
-    //{
-    //    printf("Usage: %s <client_id>\n", argv[0]);
-    //    return 1;
-    //}
-    //DiscordClientId clientId = atoll(argv[1]);
     discordInit(CLIENT_ID);
     pthread_t t1;
     pthread_create(&t1, NULL, updateLoop, NULL);
