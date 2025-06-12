@@ -18,7 +18,7 @@ TBD
 
 #### Automatic
 
-There's build.sh in the repo. Run ```build.sh download``` after cloning and then without arguments on next builds
+```make all```
 
 #### Manual
 
